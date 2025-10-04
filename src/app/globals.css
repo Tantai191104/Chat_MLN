@@ -1,11 +1,48 @@
+/* Philosophy theme color variables */
+:root {
+  --philo-bg: #f5efe6;
+  --philo-header: #f7dcb9;
+  --philo-border: #a67c52;
+  --philo-title: #231a0f;
+  --philo-accent: #c47f2a;
+  --philo-hover: #ffe6c7;
+  --philo-user: #f7dcb9;
+  --philo-ai: #231a0f;
+  --philo-ai-bg: #fffbe6;
+  --philo-white: #fff;
+  --philo-gray: #23272f;
+  --philo-shadow: 0 4px 20px 0 rgba(44, 32, 12, 0.15);
+}
+
+.philo-shadow {
+  box-shadow: var(--philo-shadow);
+}
+
+/* Utility classes for philosophy theme */
+.bg-philo-bg { background-color: var(--philo-bg); }
+.bg-philo-header { background-color: var(--philo-header); }
+.bg-philo-hover { background-color: var(--philo-hover); }
+.bg-philo-ai { background-color: var(--philo-ai); }
+.bg-philo-white { background-color: var(--philo-white); }
+.border-philo-border { border-color: var(--philo-border); }
+.text-philo-title { color: var(--philo-title); }
+.text-philo-accent { color: var(--philo-accent); }
+.text-philo-white { color: var(--philo-white); }
+.text-philo-gray { color: var(--philo-gray); }
 @import "tailwindcss";
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --philo-bg: #f5efe6;
+  --philo-header: #f7dcb9;
+  --philo-border: #a67c52;
+  --philo-title: #231a0f;
+  --philo-accent: #c47f2a;
+  --philo-hover: #ffe6c7;
 }
 
-@theme inline {
+:root {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
@@ -23,4 +60,103 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Custom animations for sidebar */
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutLeft {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.animate-slideInLeft {
+  animation: slideInLeft 0.3s ease-in-out forwards;
+}
+
+.animate-slideOutLeft {
+  animation: slideOutLeft 0.3s ease-in-out forwards;
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-in-out forwards;
+}
+
+.animate-fadeOut {
+  animation: fadeOut 0.3s ease-in-out forwards;
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.bg-philo-bg {
+  background-color: var(--philo-bg);
+}
+
+.bg-philo-header {
+  background-color: var(--philo-header);
+}
+
+.border-philo-border {
+  border-color: var(--philo-border);
+}
+
+.text-philo-title {
+  color: var(--philo-title);
+}
+
+.text-philo-accent {
+  color: var(--philo-accent);
+}
+
+.bg-philo-hover {
+  background-color: var(--philo-hover);
 }
