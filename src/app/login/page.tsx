@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import LoginPage from '../page';
+import LoginPage from './LoginPage';
 
 export default function LoginWrapper() {
   return (
