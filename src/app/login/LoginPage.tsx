@@ -16,19 +16,16 @@ export default function LoginPage() {
   const hasShownToast = useRef(false);
 
   useEffect(() => {
-    // Check if user just registered
     const registered = searchParams?.get('registered');
     if (registered === 'true' && !hasShownToast.current) {
       hasShownToast.current = true;
       messageApi.success({
         content: 'Đăng ký thành công! Hãy đăng nhập để tiếp tục.',
         duration: 4,
-        style: {
-          marginTop: '20vh',
-        },
+        style: { marginTop: '20vh' },
       });
 
-      // Clean up URL parameter
+      // Xóa query param khỏi URL
       const url = new URL(window.location.href);
       url.searchParams.delete('registered');
       window.history.replaceState({}, '', url.toString());
@@ -49,10 +46,9 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Giả lập gọi API
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      // Simple validation - in real app you would validate with backend
       if (username.trim() && password.trim()) {
         messageApi.success({
           content: 'Đăng nhập thành công! Chuyển hướng...',
@@ -84,10 +80,11 @@ export default function LoginPage() {
       <div
         className="min-h-screen flex items-center justify-center bg-philo-bg relative"
         style={{
-          backgroundImage: "url('https://cdn.vietnambiz.vn/2019/9/23/mind-1-e1566168915788-1569231581988672857339.jpg')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat"
+          backgroundImage:
+            "url('https://cdn.vietnambiz.vn/2019/9/23/mind-1-e1566168915788-1569231581988672857339.jpg')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
         }}
       >
         {/* Overlay */}
@@ -96,9 +93,11 @@ export default function LoginPage() {
         {/* Login Container */}
         <div className="relative z-10 w-full max-w-md p-8">
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-8 philo-shadow">
-            {/* Logo/Icon */}
+            {/* Header */}
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-gray-800 mb-2 drop-shadow-sm">Lý luận nhận thức</h1>
+              <h1 className="text-3xl font-bold text-gray-800 mb-2 drop-shadow-sm">
+                Lý luận nhận thức
+              </h1>
               <p className="text-gray-700 italic text-sm font-medium">
                 "Triết học là nghệ thuật đặt câu hỏi và lý giải nhận thức"
               </p>
@@ -107,7 +106,10 @@ export default function LoginPage() {
             {/* Login Form */}
             <form onSubmit={handleLogin} className="space-y-6">
               <div>
-                <label htmlFor="username" className="block text-sm font-semibold text-gray-900 mb-2">
+                <label
+                  htmlFor="username"
+                  className="block text-sm font-semibold text-gray-900 mb-2"
+                >
                   Tên người dùng
                 </label>
                 <input
@@ -122,7 +124,10 @@ export default function LoginPage() {
               </div>
 
               <div className="mt-4">
-                <label htmlFor="password" className="block text-sm font-semibold text-gray-900 mb-2">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-semibold text-gray-900 mb-2"
+                >
                   Mật khẩu
                 </label>
                 <input
@@ -135,16 +140,37 @@ export default function LoginPage() {
                   required
                 />
               </div>
+
               <button
                 type="submit"
                 disabled={loading}
-                className={`w-full bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-bold py-3 px-4 rounded-xl transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${loading ? 'animate-pulse' : ''}`}
+                className={`w-full bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-bold py-3 px-4 rounded-xl transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${
+                  loading ? 'animate-pulse' : ''
+                }`}
               >
                 {loading ? (
                   <div className="flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg
+                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 
+                        5.291A7.962 7.962 0 014 12H0c0 
+                        3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
                     </svg>
                     Đang đăng nhập...
                   </div>
@@ -154,7 +180,7 @@ export default function LoginPage() {
               </button>
             </form>
 
-            {/* Additional Options */}
+            {/* Additional Links */}
             <div className="mt-6 text-center space-y-3">
               <a
                 href="#"
@@ -173,7 +199,7 @@ export default function LoginPage() {
               </p>
             </div>
 
-            {/* Quote */} 
+            {/* Quote */}
             <div className="mt-8 text-center">
               <p className="text-xs text-gray-600 italic font-medium">
                 "Tôi biết rằng tôi không biết gì." — Socrates
