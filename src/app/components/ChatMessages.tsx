@@ -33,8 +33,8 @@ export default function ChatMessages({ currentMessages, setMessage, loading }: P
         const elements: React.ReactNode[] = [];
         let lastIndex = 0;
 
-        // Regex tổng hợp: markdown link + plain URL (cải thiện)
-        const regex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<>\[\]()]+)/g;
+        // Regex for handling links with optional spaces in URLs
+        const regex = /\[([^\]]+)\]\s*\(\s*([^)]+?)\s*\)|(?:^|[\s(])(https?:\/\/[^\s<>[\]()]+)(?:$|[\s)])/g;
         let match;
 
         while ((match = regex.exec(text)) !== null) {
@@ -45,29 +45,39 @@ export default function ChatMessages({ currentMessages, setMessage, loading }: P
 
             if (match[1] && match[2]) {
                 // Markdown link [text](url)
-                elements.push(
-                    <a
-                        key={match.index}
-                        href={match[2]}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 underline font-medium break-words"
-                    >
-                        {match[1]}
-                    </a>
-                );
-            } else if (match[3]) {
-                // Plain URL
-                const url = match[3];
+                const displayText = match[1].trim();
+                let url = match[2].trim();
+                
+                // Xử lý URL có khoảng trắng
+                url = url.replace(/\s+/g, '');
+
                 elements.push(
                     <a
                         key={match.index}
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 underline font-medium break-words"
+                        className="text-blue-600 hover:text-blue-800 underline font-medium break-words inline-flex items-center"
                     >
-                        {url.length > 50 ? url.slice(0, 50) + '...' : url}
+                        <span className="mr-1">🔗</span>
+                        {displayText}
+                    </a>
+                );
+            } else {
+                // URL thông thường
+                const url = match[3];
+                const displayUrl = url.length > 50 ? `${url.slice(0, 40)}...${url.slice(-10)}` : url;
+                
+                elements.push(
+                    <a
+                        key={match.index}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 underline font-medium break-words inline-flex items-center"
+                    >
+                        <span className="mr-1">🔗</span>
+                        {displayUrl}
                     </a>
                 );
             }
@@ -92,129 +102,179 @@ export default function ChatMessages({ currentMessages, setMessage, loading }: P
         const processContent = (text: string) => {
             if (!text || isImagePlaceholder) return [];
 
+            // Thêm padding đầu văn bản
+            const elements: React.ReactNode[] = [
+                <div key="initial-spacing" className="mb-4" />
+            ];
+
             // Tách các dòng và xử lý
-            const lines = text.split('\n').map(line => line.trim()).filter(line => line);
-            const elements: React.ReactNode[] = [];
+            const lines = text.split('\n');
             let currentIndex = 0;
+            let currentSection: React.ReactNode[] = [];
+            let inSection = false;
 
             while (currentIndex < lines.length) {
-                const line = lines[currentIndex];
+                const line = lines[currentIndex].trim();
+                if (!line) {
+                    if (currentSection.length > 0) {
+                        elements.push(
+                            <div key={`section-${currentIndex}`} className="space-y-3">
+                                {currentSection}
+                            </div>
+                        );
+                        currentSection = [];
+                    }
+                    currentIndex++;
+                    continue;
+                }
 
                 // 1. Tiêu đề chính có số thứ tự (1., 2., 3.)
                 const mainTitleMatch = line.match(/^(\d+)\.\s*(.+)$/);
                 if (mainTitleMatch) {
                     const [, number, title] = mainTitleMatch;
+                    if (currentSection.length > 0) {
+                        elements.push(
+                            <div key={`section-${currentIndex}`} className="pl-6 space-y-4 mb-6">
+                                {currentSection}
+                            </div>
+                        );
+                        currentSection = [];
+                    }
                     elements.push(
-                        <div key={currentIndex} className="mb-6">
-                            <h2 className="text-xl font-bold text-gray-900 mb-4 leading-tight">
-                                <span className="text-blue-600">{number}.</span> {parseTextWithLinks(title)}
+                        <div key={currentIndex} className="mb-8 mt-8 first:mt-2">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-6 leading-relaxed pb-3 border-b-2 border-gray-200">
+                                <span className="text-blue-600 mr-2">{number}.</span>
+                                {parseTextWithLinks(title)}
                             </h2>
                         </div>
                     );
+                    inSection = true;
                     currentIndex++;
                     continue;
                 }
 
                 // 2. Kiểm tra dòng chỉ chứa link (có hoặc không có markdown)
-                const linkOnlyMatch = line.match(/^(.*?)(\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<>\[\]()]+))(.*)$/);
+                const linkOnlyMatch = line.match(/^\s*\[((?:[^\[\]]|\[[^\[\]]*\])*)\]\(([^)]+)\)\s*$/);
                 if (linkOnlyMatch) {
-                    const beforeLink = linkOnlyMatch[1]?.trim();
-                    const linkText = linkOnlyMatch[3];
-                    const linkUrl = linkOnlyMatch[4] || linkOnlyMatch[5];
-                    const afterLink = linkOnlyMatch[6]?.trim();
-
-                    // Nếu dòng chỉ chứa link (có thể có text ít ở đầu hoặc cuối)
-                    if ((!beforeLink || beforeLink.length < 10) && (!afterLink || afterLink.length < 10)) {
-                        elements.push(
-                            <div key={currentIndex} className="mb-3">
-                                <div className="flex items-center space-x-2">
-                                    <span className="text-blue-600 text-sm">🔗</span>
-                                    <a
-                                        href={linkUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-blue-600 hover:text-blue-800 underline font-medium break-words text-sm"
-                                    >
-                                        {linkText || (linkUrl.length > 60 ? linkUrl.slice(0, 60) + '...' : linkUrl)}
-                                    </a>
-                                </div>
-                            </div>
-                        );
-                        currentIndex++;
-                        continue;
-                    }
-                }
-
-                // 3. Mô tả/nội dung chính (không bắt đầu bằng bullet hoặc số)
-                if (!line.match(/^[•◦○-]\s+/) && !line.match(/^\d+\.\s/) && line.includes(':')) {
-                    const colonIndex = line.indexOf(':');
-                    const beforeColon = line.substring(0, colonIndex);
-                    const afterColon = line.substring(colonIndex + 1).trim();
+                    const linkText = linkOnlyMatch[1].trim();
+                    let linkUrl = linkOnlyMatch[2].trim().replace(/\s+/g, '');
+                    const isPlainUrl = !linkText || linkText === linkUrl;
 
                     elements.push(
-                        <div key={currentIndex} className="mb-4">
-                            <div className="font-semibold text-gray-800 mb-2">
-                                {parseTextWithLinks(beforeColon)}:
+                        <div key={currentIndex} className="mb-3 pl-4">
+                            <div className="flex items-center space-x-2">
+                                <a
+                                    href={linkUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:text-blue-800 underline font-medium break-words text-sm inline-flex items-center"
+                                >
+                                    <span className="mr-1">🔗</span>
+                                    {linkText}
+                                </a>
                             </div>
-                            {afterColon && (
-                                <div className="pl-4 text-gray-700 leading-relaxed">
-                                    {parseTextWithLinks(afterColon)}
-                                </div>
-                            )}
                         </div>
                     );
                     currentIndex++;
                     continue;
                 }
 
+                // 3. Mô tả/nội dung chính (không bắt đầu bằng bullet hoặc số)
+                const textContent = lines[currentIndex];
+                if (!textContent.match(/^[•◦○-]\s+/) && !textContent.match(/^\d+\.\s/) && textContent.includes(':')) {
+                    const colonIndex = textContent.indexOf(':');
+                    const beforeColon = textContent.substring(0, colonIndex);
+                    const afterColon = textContent.substring(colonIndex + 1).trim();
+
+                    const contentBlock = (
+                        <div key={currentIndex} className="mb-4">
+                            <div className="font-semibold text-gray-800 mb-2 text-lg">
+                                {parseTextWithLinks(beforeColon)}:
+                            </div>
+                            {afterColon && (
+                                <div className="pl-6 text-gray-700 leading-relaxed">
+                                    {parseTextWithLinks(afterColon)}
+                                </div>
+                            )}
+                        </div>
+                    );
+
+                    if (inSection) {
+                        currentSection.push(contentBlock);
+                    } else {
+                        elements.push(contentBlock);
+                    }
+                    currentIndex++;
+                    continue;
+                }
+
                 // 4. Bullet points
-                if (line.match(/^[•◦○-]\s+/)) {
-                    const cleanText = line.replace(/^[•◦○-]\s+/, '');
+                if (textContent.match(/^[•◦○-]\s+/)) {
+                    const cleanText = textContent.replace(/^[•◦○-]\s+/, '');
 
                     // Kiểm tra nếu bullet point chứa link
-                    const bulletLinkMatch = cleanText.match(/^(.*?)(\[([^\]]+)\]\((https?:\/\/[^\s)]+)\|(https?:\/\/[^\s<>\[\]()]+))(.*)$/);
-                    if (bulletLinkMatch && (!bulletLinkMatch[1]?.trim() || bulletLinkMatch[1].trim().length < 15)) {
-                        const linkText = bulletLinkMatch[3];
-                        const linkUrl = bulletLinkMatch[4] || bulletLinkMatch[5];
+                    const bulletLinkMatch = cleanText.match(/^\s*\[([^\]]+)\]\s*\(\s*([^)]+?)\s*\)\s*$/);
+                    const bulletPoint = bulletLinkMatch ? (
+                        <div key={currentIndex} className="mb-3 flex items-start group">
+                            <span className="text-blue-600 mr-3 mt-1 text-sm group-hover:text-blue-800">•</span>
+                            <div className="flex items-center space-x-2 flex-1">
+                                <a
+                                    href={bulletLinkMatch[2].trim().replace(/\s+/g, '')}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:text-blue-800 underline font-medium break-words text-sm inline-flex items-center"
+                                >
+                                    <span className="mr-1">🔗</span>
+                                    {bulletLinkMatch[1].trim()}
+                                </a>
+                            </div>
+                        </div>
+                    ) : (
+                        <div key={currentIndex} className="mb-3 flex items-start group">
+                            <span className="text-blue-600 mr-3 mt-1 text-sm group-hover:text-blue-800">•</span>
+                            <div className="text-gray-700 leading-relaxed flex-1">
+                                {parseTextWithLinks(cleanText)}
+                            </div>
+                        </div>
+                    );
 
-                        elements.push(
-                            <div key={currentIndex} className="mb-2 flex items-start">
-                                <span className="text-blue-600 mr-3 mt-1 text-sm">•</span>
-                                <div className="flex items-center space-x-2 flex-1">
-                                    <span className="text-blue-600 text-sm">🔗</span>
-                                    <a
-                                        href={linkUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-blue-600 hover:text-blue-800 underline font-medium break-words text-sm"
-                                    >
-                                        {linkText || (linkUrl.length > 60 ? linkUrl.slice(0, 60) + '...' : linkUrl)}
-                                    </a>
-                                </div>
-                            </div>
-                        );
+                    if (inSection) {
+                        currentSection.push(bulletPoint);
                     } else {
-                        elements.push(
-                            <div key={currentIndex} className="mb-2 flex items-start">
-                                <span className="text-blue-600 mr-3 mt-1 text-sm">•</span>
-                                <div className="text-gray-800 leading-relaxed flex-1">
-                                    {parseTextWithLinks(cleanText)}
-                                </div>
-                            </div>
-                        );
+                        elements.push(bulletPoint);
                     }
                     currentIndex++;
                     continue;
                 }
 
                 // 5. Đoạn văn thông thường
-                elements.push(
+                const paragraph = (
                     <p key={currentIndex} className="mb-4 text-gray-800 leading-relaxed">
                         {parseTextWithLinks(line)}
                     </p>
                 );
+
+                if (inSection) {
+                    currentSection.push(paragraph);
+                } else {
+                    elements.push(paragraph);
+                }
                 currentIndex++;
             }
+
+            // Add any remaining section content
+            if (currentSection.length > 0) {
+                elements.push(
+                    <div key="final-section" className="space-y-4 mb-6 pl-6">
+                        {currentSection}
+                    </div>
+                );
+            }
+
+            // Thêm padding cuối văn bản
+            elements.push(
+                <div key="final-spacing" className="mb-4" />
+            );
 
             return elements;
         };
