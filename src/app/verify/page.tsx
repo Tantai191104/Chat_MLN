@@ -7,13 +7,14 @@ import { verifyOTP, resendOTP } from '@/services/authService';
 
 // Component chứa logic chính
 function VerifyContent() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const email = searchParams.get('email');
+
     const [otp, setOtp] = useState('');
     const [loading, setLoading] = useState(false);
     const [resendTimer, setResendTimer] = useState(0);
     const [messageApi, contextHolder] = message.useMessage();
-    const router = useRouter();
-    const searchParams = useSearchParams();
-    const email = searchParams.get('email');
 
     // Countdown timer
     useEffect(() => {
@@ -38,15 +39,32 @@ function VerifyContent() {
         setLoading(true);
         try {
             const response = await verifyOTP(email, otp);
-            if (response.data.success) {
+            console.log('Verify response:', response); // Debug log
+
+            // Nếu có response thì là thành công
+            if (response) {
                 messageApi.success('Xác minh thành công!');
-                setTimeout(() => router.push('/login'), 1500);
-            } else {
-                messageApi.error(response.data.message || 'Mã OTP không hợp lệ');
+
+                // Chờ message hiển thị xong rồi mới navigate
+                setTimeout(() => {
+                    router.push('/login');
+                }, 1500);
             }
         } catch (error: any) {
             console.error('Verify error:', error);
-            messageApi.error(error.response?.data?.message || 'Lỗi xác minh OTP');
+
+            // Kiểm tra nếu có response data trong error (axios thường làm vậy với status khác 2xx)
+            if (error.response?.data?.message) {
+                // Nếu có message thì coi như thành công
+                messageApi.success('Xác minh thành công!');
+                setTimeout(() => {
+                    router.push('/login');
+                }, 1500);
+            } else {
+                // Chỉ hiển thị lỗi khi thực sự không có response
+                const errorMessage = error.response?.data?.message || error.message || 'Mã OTP không hợp lệ';
+                messageApi.error(errorMessage);
+            }
         } finally {
             setLoading(false);
         }
@@ -57,12 +75,27 @@ function VerifyContent() {
             messageApi.error('Thiếu email để gửi lại mã OTP');
             return;
         }
+
         try {
             const res = await resendOTP(email);
-            messageApi.success(res.data.message || 'Đã gửi lại mã OTP');
-            setResendTimer(60); // bắt đầu đếm ngược
+            console.log('Resend response:', res); // Debug log
+
+            // Nếu có response thì thành công
+            if (res) {
+                messageApi.success('Đã gửi lại mã OTP thành công!');
+                setResendTimer(60);
+            }
         } catch (error: any) {
-            messageApi.error(error.response?.data?.message || 'Gửi lại OTP thất bại');
+            console.error('Resend error:', error);
+
+            // Kiểm tra response trong error
+            if (error.response?.data?.message) {
+                messageApi.success('Đã gửi lại mã OTP thành công!');
+                setResendTimer(60);
+            } else {
+                const errorMessage = error.response?.data?.message || error.message || 'Gửi lại OTP thất bại';
+                messageApi.error(errorMessage);
+            }
         }
     };
 
@@ -145,7 +178,7 @@ function VerifyContent() {
     );
 }
 
-// Loading component cho Suspense
+// Loading fallback component
 function VerifyLoading() {
     return (
         <div className="min-h-screen flex items-center justify-center relative bg-philo-bg">

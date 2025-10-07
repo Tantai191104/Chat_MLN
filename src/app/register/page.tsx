@@ -89,7 +89,7 @@ export default function RegisterPage() {
                 
                 // Redirect to OTP verification page
                 setTimeout(() => {
-                    router.push(`/verify-otp?email=${encodeURIComponent(formData.email)}`);
+                    router.push(`/verify?email=${encodeURIComponent(formData.email)}`);
                 }, 1500);
             } else {
                 messageApi.error({
