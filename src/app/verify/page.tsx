@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { message } from 'antd';
 import { verifyOTP, resendOTP } from '@/services/authService';
 
-export default function VerifyPage() {
+// Component chứa logic chính
+function VerifyContent() {
     const [otp, setOtp] = useState('');
     const [loading, setLoading] = useState(false);
     const [resendTimer, setResendTimer] = useState(0);
@@ -46,7 +47,7 @@ export default function VerifyPage() {
         } catch (error: any) {
             console.error('Verify error:', error);
             messageApi.error(error.response?.data?.message || 'Lỗi xác minh OTP');
-        } finally { 
+        } finally {
             setLoading(false);
         }
     };
@@ -106,6 +107,7 @@ export default function VerifyPage() {
                                 className="w-full px-4 py-3 bg-amber-50 border rounded-xl text-gray-900 font-semibold placeholder-gray-400 shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-600 border-amber-500"
                                 placeholder="Nhập mã OTP gồm 6 chữ số"
                                 disabled={loading}
+                                maxLength={6}
                             />
                         </div>
 
@@ -140,5 +142,41 @@ export default function VerifyPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+// Loading component cho Suspense
+function VerifyLoading() {
+    return (
+        <div className="min-h-screen flex items-center justify-center relative bg-philo-bg">
+            <div
+                className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                style={{
+                    backgroundImage:
+                        "url('https://cdn.vietnambiz.vn/2019/9/23/mind-1-e1566168915788-1569231581988672857339.jpg')",
+                }}
+            ></div>
+            <div className="absolute inset-0 bg-black/40"></div>
+
+            <div className="relative z-10 w-full max-w-md mx-4">
+                <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-amber-200">
+                    <div className="text-center">
+                        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600 mb-4"></div>
+                        <h1 className="text-xl font-bold text-gray-900">
+                            Đang tải...
+                        </h1>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// Main component với Suspense wrapper
+export default function VerifyPage() {
+    return (
+        <Suspense fallback={<VerifyLoading />}>
+            <VerifyContent />
+        </Suspense>
     );
 }
