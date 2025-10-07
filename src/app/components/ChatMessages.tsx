@@ -132,9 +132,15 @@ export default function ChatMessages({ currentMessages, setMessage, loading }: P
                 const mainTitleMatch = line.match(/^(\d+)\.\s*(.+)$/);
                 if (mainTitleMatch) {
                     const [, number, title] = mainTitleMatch;
+                    // Thêm khoảng trống trước section mới nếu không phải section đầu tiên
+                    if (elements.length > 1) {
+                        elements.push(
+                            <div key={`spacer-${currentIndex}`} className="my-8 border-t border-gray-100" />
+                        );
+                    }
                     if (currentSection.length > 0) {
                         elements.push(
-                            <div key={`section-${currentIndex}`} className="pl-6 space-y-4 mb-6">
+                            <div key={`section-${currentIndex}`} className="pl-6 space-y-6 mb-8">
                                 {currentSection}
                             </div>
                         );
@@ -142,10 +148,13 @@ export default function ChatMessages({ currentMessages, setMessage, loading }: P
                     }
                     elements.push(
                         <div key={currentIndex} className="mb-8 mt-8 first:mt-2">
-                            <h2 className="text-2xl font-bold text-gray-900 mb-6 leading-relaxed pb-3 border-b-2 border-gray-200">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-8 leading-relaxed pb-3 border-b-2 border-gray-200">
                                 <span className="text-blue-600 mr-2">{number}.</span>
                                 {parseTextWithLinks(title)}
                             </h2>
+                            <div className="space-y-6">
+                                {/* Container for section content */}
+                            </div>
                         </div>
                     );
                     inSection = true;
@@ -161,15 +170,15 @@ export default function ChatMessages({ currentMessages, setMessage, loading }: P
                     const isPlainUrl = !linkText || linkText === linkUrl;
 
                     elements.push(
-                        <div key={currentIndex} className="mb-3 pl-4">
-                            <div className="flex items-center space-x-2">
+                        <div key={currentIndex} className="mb-4 pl-8">
+                            <div className="flex items-center space-x-3 group hover:bg-blue-50 rounded-lg p-2 transition-all duration-200">
                                 <a
                                     href={linkUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-blue-600 hover:text-blue-800 underline font-medium break-words text-sm inline-flex items-center"
+                                    className="text-blue-600 hover:text-blue-800 underline font-medium break-words text-sm inline-flex items-center group-hover:text-blue-700"
                                 >
-                                    <span className="mr-1">🔗</span>
+                                    <span className="mr-2 opacity-80 group-hover:opacity-100">🔗</span>
                                     {linkText}
                                 </a>
                             </div>
@@ -186,13 +195,18 @@ export default function ChatMessages({ currentMessages, setMessage, loading }: P
                     const beforeColon = textContent.substring(0, colonIndex);
                     const afterColon = textContent.substring(colonIndex + 1).trim();
 
+                    // Xác định nếu là tiêu đề phụ và level của nó
+                    const spaces = textContent.match(/^\s+/);
+                    const indentLevel = spaces ? Math.floor(spaces[0].length / 2) : 0;
+                    const isSubSection = beforeColon.length <= 30 || indentLevel > 0;
+
                     const contentBlock = (
-                        <div key={currentIndex} className="mb-4">
-                            <div className="font-semibold text-gray-800 mb-2 text-lg">
+                        <div key={currentIndex} className={`${isSubSection ? 'mb-8 mt-6' : 'mb-6'} ${indentLevel > 0 ? `ml-${indentLevel * 8}` : ''}`}>
+                            <div className={`font-semibold text-gray-800 mb-4 ${isSubSection ? 'text-lg border-b border-gray-200 pb-3' : ''}`}>
                                 {parseTextWithLinks(beforeColon)}:
                             </div>
                             {afterColon && (
-                                <div className="pl-6 text-gray-700 leading-relaxed">
+                                <div className="pl-8 text-gray-700 leading-relaxed">
                                     {parseTextWithLinks(afterColon)}
                                 </div>
                             )}
@@ -208,15 +222,25 @@ export default function ChatMessages({ currentMessages, setMessage, loading }: P
                     continue;
                 }
 
-                // 4. Bullet points
+                // 4. Bullet points và các mục con
                 if (textContent.match(/^[•◦○-]\s+/)) {
                     const cleanText = textContent.replace(/^[•◦○-]\s+/, '');
+                    
+                    // Xác định level của bullet point bằng số khoảng trắng đầu dòng
+                    const spaces = textContent.match(/^\s+/);
+                    const indentLevel = spaces ? Math.floor(spaces[0].length / 2) : 0;
+                    const isPlainText = !cleanText.includes('[') && !cleanText.includes('http');
+
+                    // Tính toán margin và padding dựa trên level và loại nội dung
+                    const marginClass = indentLevel > 0 ? 'ml-12' : 'ml-8';
+                    const marginTopClass = isPlainText ? (indentLevel > 0 ? 'mt-3' : 'mt-4') : 'mt-2';
 
                     // Kiểm tra nếu bullet point chứa link
                     const bulletLinkMatch = cleanText.match(/^\s*\[([^\]]+)\]\s*\(\s*([^)]+?)\s*\)\s*$/);
+                    const isPlainBullet = !bulletLinkMatch && !cleanText.includes('[') && !cleanText.includes('http');
                     const bulletPoint = bulletLinkMatch ? (
-                        <div key={currentIndex} className="mb-3 flex items-start group">
-                            <span className="text-blue-600 mr-3 mt-1 text-sm group-hover:text-blue-800">•</span>
+                        <div key={currentIndex} className={`${marginTopClass} mb-2 flex items-start group ${marginClass}`}>
+                            <span className="text-blue-500 mr-2 mt-1 text-xs group-hover:text-blue-700 flex-shrink-0">•</span>
                             <div className="flex items-center space-x-2 flex-1">
                                 <a
                                     href={bulletLinkMatch[2].trim().replace(/\s+/g, '')}
@@ -230,10 +254,11 @@ export default function ChatMessages({ currentMessages, setMessage, loading }: P
                             </div>
                         </div>
                     ) : (
-                        <div key={currentIndex} className="mb-3 flex items-start group">
-                            <span className="text-blue-600 mr-3 mt-1 text-sm group-hover:text-blue-800">•</span>
-                            <div className="text-gray-700 leading-relaxed flex-1">
+                        <div key={currentIndex} className={`${marginTopClass} ${isPlainBullet ? 'mb-4' : 'mb-2'} flex items-start group ${marginClass}`}>
+                            <span className="text-blue-500 mr-2 mt-1 text-xs group-hover:text-blue-700 flex-shrink-0">•</span>
+                            <div className="text-gray-600 leading-relaxed flex-1 text-sm">
                                 {parseTextWithLinks(cleanText)}
+                                {isPlainBullet && indentLevel === 0 && <div className="mt-4 border-b border-gray-100 opacity-50" />}
                             </div>
                         </div>
                     );
@@ -248,10 +273,47 @@ export default function ChatMessages({ currentMessages, setMessage, loading }: P
                 }
 
                 // 5. Đoạn văn thông thường
-                const paragraph = (
-                    <p key={currentIndex} className="mb-4 text-gray-800 leading-relaxed">
-                        {parseTextWithLinks(line)}
-                    </p>
+                // Kiểm tra nếu là mục đánh số (ví dụ: "1.", "2.")
+                const numberedItemMatch = line.match(/^(\d+)\.\s*(.+)$/);
+                if (numberedItemMatch && !line.includes(':')) {
+                    const [, number, content] = numberedItemMatch;
+                    const isPlainText = !content.includes('[') && !content.includes('http');
+                    const paragraph = (
+                        <div key={currentIndex} className="flex flex-col space-y-2 mb-6">
+                            <div className="flex items-start">
+                                <span className="text-blue-600 font-semibold mr-3 w-6">{number}.</span>
+                                <div className="flex-1">
+                                    <div className="text-gray-800 leading-relaxed">
+                                        {parseTextWithLinks(content)}
+                                    </div>
+                                </div>
+                            </div>
+                            {isPlainText && <div className="mt-2 border-b border-gray-100" />}
+                        </div>
+                    );
+                    if (inSection) {
+                        currentSection.push(paragraph);
+                    } else {
+                        elements.push(paragraph);
+                    }
+                    currentIndex++;
+                    continue;
+                }
+
+                // Xử lý các đoạn văn thông thường
+                const isMainSection = line.match(/^([A-Z][\w\s]+):/) || line.match(/^(Trong|Về|Đối với|Khi|Theo)\s+/i);
+                const paragraph = isMainSection ? (
+                    <div key={currentIndex} className="mb-8 mt-4">
+                        <p className="text-gray-800 leading-relaxed font-medium text-lg">
+                            {parseTextWithLinks(line)}
+                        </p>
+                    </div>
+                ) : (
+                    <div key={currentIndex}>
+                        <p className="mb-4 text-gray-700 leading-relaxed">
+                            {parseTextWithLinks(line)}
+                        </p>
+                    </div>
                 );
 
                 if (inSection) {
@@ -262,21 +324,25 @@ export default function ChatMessages({ currentMessages, setMessage, loading }: P
                 currentIndex++;
             }
 
-            // Add any remaining section content
-            if (currentSection.length > 0) {
+                // Add any remaining section content
+                if (currentSection.length > 0) {
                 elements.push(
-                    <div key="final-section" className="space-y-4 mb-6 pl-6">
+                    <div key="final-section" className="content-section space-y-4 pl-6">
                         {currentSection}
                     </div>
+                );
+            }            // Thêm padding giữa các đoạn nội dung
+            const linesWithContent = lines.filter(line => line.trim().length > 0);
+            if (linesWithContent.length > 1) {
+                elements.push(
+                    <div key="content-break" className="border-b border-gray-100 my-6" />
                 );
             }
 
             // Thêm padding cuối văn bản
             elements.push(
                 <div key="final-spacing" className="mb-4" />
-            );
-
-            return elements;
+            );            return elements;
         };
 
         const contentElements = processContent(content);

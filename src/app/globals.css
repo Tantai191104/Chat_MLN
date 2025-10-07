@@ -112,6 +112,26 @@ body {
   animation: fadeOut 0.3s ease-in-out forwards;
 }
 
+/* Custom spacing for content sections */
+.content-section {
+  margin-bottom: 2rem;
+}
+
+.content-section:not(:first-child) {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.numbered-section {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+}
+
+.numbered-section:not(:last-child) {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
 /* Custom scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
