@@ -13,6 +13,7 @@ export interface Message {
     _id?: string;
     type: 'user' | 'ai';
     content: string;
+    mediaUrl?: string; // Thêm field cho ảnh
     createdAt?: string;
 }
 
@@ -40,12 +41,11 @@ export default function ChatPage() {
         loadChatSessions();
     }, []);
 
-    // Cập nhật hàm loadChatSessions
     const loadChatSessions = async () => {
         try {
             const response = await getChats();
             console.log('Load chats response:', response);
-            
+
             if (response?.data && Array.isArray(response.data)) {
                 const chats = response.data.map((chat: any) => ({
                     _id: chat._id,
@@ -55,13 +55,10 @@ export default function ChatPage() {
                     createdAt: new Date(chat.createdAt || chat.updatedAt || Date.now()),
                     lastMessage: chat.lastMessage || chat.summary || ''
                 }));
-                
-                // Sắp xếp theo thời gian mới nhất
+
                 chats.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-                
                 setChatSessions(chats);
             } else if (response?.data?.data && Array.isArray(response.data.data)) {
-                // Trường hợp response có cấu trúc { data: { data: [...] } }
                 const chats = response.data.data.map((chat: any) => ({
                     _id: chat._id,
                     id: chat._id,
@@ -70,13 +67,8 @@ export default function ChatPage() {
                     createdAt: new Date(chat.createdAt || chat.updatedAt || Date.now()),
                     lastMessage: chat.lastMessage || chat.summary || ''
                 }));
-                
-                chats.sort(
-                    (
-                        a: ChatSession, 
-                        b: ChatSession
-                    ) => b.createdAt.getTime() - a.createdAt.getTime()
-                );
+
+                chats.sort((a: ChatSession, b: ChatSession) => b.createdAt.getTime() - a.createdAt.getTime());
                 setChatSessions(chats);
             }
         } catch (error: any) {
@@ -100,13 +92,12 @@ export default function ChatPage() {
         try {
             setLoading(true);
             const response = await getChatById(sessionId);
-            
+
             console.log('Load chat response:', response);
-            
+
             if (response?.data) {
                 let messages = [];
-                
-                // Xử lý response có thể có nhiều format khác nhau
+
                 if (Array.isArray(response.data)) {
                     messages = response.data;
                 } else if (response.data.data && Array.isArray(response.data.data)) {
@@ -114,14 +105,17 @@ export default function ChatPage() {
                 } else if (response.data.messages && Array.isArray(response.data.messages)) {
                     messages = response.data.messages;
                 }
-                
+
                 const formattedMessages = messages.map((msg: any) => ({
                     _id: msg._id,
                     type: msg.role === 'user' ? 'user' : 'ai',
                     content: msg.content,
+                    mediaUrl: msg.mediaUrl, // Đảm bảo mediaUrl được mapping
                     createdAt: msg.createdAt
                 }));
-                
+
+                console.log('Formatted messages:', formattedMessages); // Debug log
+
                 setCurrentSessionId(sessionId);
                 setCurrentMessages(formattedMessages);
                 setIsSidebarOpen(false);
@@ -146,12 +140,12 @@ export default function ChatPage() {
             type: 'user',
             content: messageContent,
         };
-        
+
         setCurrentMessages(prev => [...prev, userMessage]);
 
         try {
             let response;
-            
+
             if (currentSessionId) {
                 response = await sendMessage(currentSessionId, messageContent);
             } else {
@@ -162,11 +156,11 @@ export default function ChatPage() {
 
             if (response?.data) {
                 const responseData = response.data;
-                
+
                 if (!currentSessionId && responseData.chatId) {
                     const newChatId = responseData.chatId;
                     setCurrentSessionId(newChatId);
-                    
+
                     const newSession: ChatSession = {
                         _id: newChatId,
                         id: newChatId,
@@ -175,12 +169,12 @@ export default function ChatPage() {
                         createdAt: new Date(),
                         lastMessage: messageContent
                     };
-                    
+
                     setChatSessions(prev => [newSession, ...prev]);
                 }
 
                 let aiResponseContent = '';
-                
+
                 if (responseData.assistantMessage && responseData.assistantMessage.content) {
                     aiResponseContent = responseData.assistantMessage.content;
                 } else if (responseData.response) {
@@ -205,15 +199,30 @@ export default function ChatPage() {
         } catch (error: any) {
             console.error('Error sending message:', error);
             messageApi.error('Đã xảy ra lỗi khi gửi tin nhắn');
-            
+
             setCurrentMessages(prev => prev.slice(0, -1));
-            
+
             if (error.response?.status === 401) {
                 router.push('/login');
             }
         } finally {
             setLoading(false);
         }
+    };
+
+    // Sửa lại hàm handleImageUploaded
+    const handleImageUploaded = async () => {
+        console.log('Image uploaded, refreshing messages...');
+
+        // Refresh lại messages của chat hiện tại
+        if (currentSessionId) {
+            await loadChatSession(currentSessionId);
+        }
+
+        // Refresh lại danh sách chat sessions
+        await loadChatSessions();
+
+        messageApi.success('Gửi hình ảnh thành công!');
     };
 
     return (
@@ -303,8 +312,8 @@ export default function ChatPage() {
 
                             {/* Messages Area - Fixed Height with Scroll */}
                             <div className="flex-1 min-h-0">
-                                <ChatMessages 
-                                    currentMessages={currentMessages} 
+                                <ChatMessages
+                                    currentMessages={currentMessages}
                                     setMessage={setMessageText}
                                     loading={loading}
                                 />
@@ -312,11 +321,13 @@ export default function ChatPage() {
 
                             {/* Input Area - Fixed at Bottom */}
                             <div className="border-t border-amber-200 bg-white/90 backdrop-blur-sm flex-shrink-0">
-                                <ChatInput 
-                                    message={messageText} 
-                                    setMessage={setMessageText} 
+                                <ChatInput
+                                    message={messageText}
+                                    setMessage={setMessageText}
                                     handleSubmit={handleSubmit}
                                     loading={loading}
+                                    chatId={currentSessionId ?? undefined} // Truyền chatId
+                                    onImageUploaded={handleImageUploaded} // Truyền callback
                                 />
                             </div>
                         </div>
