@@ -4,11 +4,14 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { message } from 'antd';
+import { login } from '@/services/authService';
 import 'antd/dist/reset.css';
 
 export default function LoginPage() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -20,8 +23,8 @@ export default function LoginPage() {
     if (registered === 'true' && !hasShownToast.current) {
       hasShownToast.current = true;
       messageApi.success({
-        content: 'Đăng ký thành công! Hãy đăng nhập để tiếp tục.',
-        duration: 4,
+        content: 'Đăng ký thành công! Kiểm tra email để lấy OTP và đăng nhập.',
+        duration: 5,
         style: { marginTop: '20vh' },
       });
 
@@ -32,12 +35,29 @@ export default function LoginPage() {
     }
   }, [searchParams, messageApi]);
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!username.trim() || !password.trim()) {
+    if (!formData.email.trim() || !formData.password.trim()) {
       messageApi.warning({
         content: 'Vui lòng điền đầy đủ thông tin!',
+        duration: 3,
+      });
+      return;
+    }
+
+    // Validate email format
+    if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      messageApi.warning({
+        content: 'Email không hợp lệ!',
         duration: 3,
       });
       return;
@@ -46,10 +66,13 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // Giả lập gọi API
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const response = await login(formData.email, formData.password);
+      console.log('Login response:', response);
 
-      if (username.trim() && password.trim()) {
+      // ✅ Backend trả về { message, data }
+      const userData = response?.data || response?.data?.data;
+
+      if (userData?.token) {
         messageApi.success({
           content: 'Đăng nhập thành công! Chuyển hướng...',
           duration: 2,
@@ -60,13 +83,18 @@ export default function LoginPage() {
         }, 1000);
       } else {
         messageApi.error({
-          content: 'Tên đăng nhập hoặc mật khẩu không đúng!',
+          content: response?.message || 'Đăng nhập thất bại',
           duration: 3,
         });
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Login error:', error);
+
+      const errorMsg =
+        error?.response?.data?.message || error?.message || 'Đã xảy ra lỗi trong quá trình đăng nhập';
+
       messageApi.error({
-        content: 'Có lỗi xảy ra! Vui lòng thử lại.',
+        content: errorMsg,
         duration: 3,
       });
     } finally {
@@ -107,18 +135,20 @@ export default function LoginPage() {
             <form onSubmit={handleLogin} className="space-y-6">
               <div>
                 <label
-                  htmlFor="username"
+                  htmlFor="email"
                   className="block text-sm font-semibold text-gray-900 mb-2"
                 >
-                  Tên người dùng
+                  Email
                 </label>
                 <input
-                  type="text"
-                  id="username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-amber-500 rounded-xl focus:outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-300 transition-all bg-white text-gray-900 placeholder-gray-500 shadow-md font-medium"
-                  placeholder="Nhập tên người dùng"
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 bg-amber-50 border border-amber-500 rounded-xl focus:outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-300 transition-all text-gray-900 placeholder-gray-400 shadow-md font-semibold"
+                  placeholder="Nhập địa chỉ email"
+                  disabled={loading}
                   required
                 />
               </div>
@@ -133,10 +163,12 @@ export default function LoginPage() {
                 <input
                   type="password"
                   id="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-amber-500 rounded-xl focus:outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-300 transition-all bg-white text-gray-900 placeholder-gray-500 shadow-md font-medium"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 bg-amber-50 border border-amber-500 rounded-xl focus:outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-300 transition-all text-gray-900 placeholder-gray-400 shadow-md font-semibold"
                   placeholder="Nhập mật khẩu"
+                  disabled={loading}
                   required
                 />
               </div>
@@ -144,9 +176,8 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className={`w-full bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-bold py-3 px-4 rounded-xl transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${
-                  loading ? 'animate-pulse' : ''
-                }`}
+                className={`w-full bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-bold py-3 px-4 rounded-xl transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${loading ? 'animate-pulse' : ''
+                  }`}
               >
                 {loading ? (
                   <div className="flex items-center justify-center">

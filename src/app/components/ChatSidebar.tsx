@@ -19,6 +19,29 @@ export default function ChatSidebar({
     isSidebarOpen,
     setIsSidebarOpen,
 }: Props) {
+    // Format date cho hiển thị
+    const formatDate = (date: Date) => {
+        const now = new Date();
+        const diff = now.getTime() - date.getTime();
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+        if (days === 0) {
+            return 'Hôm nay';
+        } else if (days === 1) {
+            return 'Hôm qua';
+        } else if (days < 7) {
+            return `${days} ngày trước`;
+        } else {
+            return date.toLocaleDateString('vi-VN');
+        }
+    };
+
+    // Truncate title
+    const truncateTitle = (title: string, maxLength = 35) => {
+        if (title.length <= maxLength) return title;
+        return title.substring(0, maxLength) + '...';
+    };
+
     return (
         <>
             {/* Sidebar */}
@@ -113,32 +136,80 @@ export default function ChatSidebar({
 
                         {/* Label nhóm */}
                         <div className="px-4 pt-6 pb-2">
-                            <h3 className="text-xs text-white/60 font-semibold tracking-wide uppercase transition-colors duration-200 hover:text-white/80">Đoạn chat</h3>
+                            <h3 className="text-xs text-white/60 font-semibold tracking-wide uppercase transition-colors duration-200 hover:text-white/80">
+                                Đoạn chat ({chatSessions.length})
+                            </h3>
                         </div>
 
                         {/* Danh sách chat */}
                         <div className="flex-1 px-3 pb-2 overflow-y-auto custom-scrollbar">
                             {chatSessions.length === 0 ? (
-                                <div className="text-center text-white/40 mt-8">
-                                    <p className="text-sm">Chưa có đoạn chat nào</p>
+                                <div className="text-center text-white/40 mt-8 px-3">
+                                    <div className="mb-4">
+                                        <svg className="w-12 h-12 mx-auto text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                        </svg>
+                                    </div>
+                                    <p className="text-sm font-medium mb-1">Chưa có đoạn chat nào</p>
+                                    <p className="text-xs text-white/30">Bắt đầu cuộc trò chuyện đầu tiên</p>
                                 </div>
                             ) : (
                                 <div className="space-y-1">
                                     {chatSessions.map((session, index) => (
-                                        <button
-                                            key={session.id}
-                                            onClick={() => loadChatSession(session.id)}
-                                            className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-200 text-sm group hover:scale-[1.02] ${currentSessionId === session.id
-                                                ? 'bg-white/15 text-white shadow-lg shadow-white/10 scale-[1.02]'
-                                                : 'hover:bg-white/5 text-white/80 hover:text-white'
+                                        <div
+                                            key={session._id}
+                                            className={`group transition-all duration-200 hover:scale-[1.02] ${currentSessionId === session._id
+                                                    ? 'bg-white/15 scale-[1.02] shadow-lg shadow-white/10'
+                                                    : 'hover:bg-white/5'
                                                 }`}
                                             style={{
                                                 animationDelay: `${index * 50}ms`,
                                                 animation: isSidebarOpen ? 'fadeIn 0.3s ease-out forwards' : 'none'
                                             }}
                                         >
-                                            <div className="truncate font-medium transition-transform duration-200 group-hover:translate-x-1">{session.title}</div>
-                                        </button>
+                                            <button
+                                                onClick={() => loadChatSession(session._id)}
+                                                className="w-full text-left p-3 rounded-lg transition-all duration-200"
+                                                title={session.title}
+                                            >
+                                                <div className="flex items-start gap-3">
+                                                    {/* Chat icon */}
+                                                    <div className="flex-shrink-0 mt-0.5">
+                                                        <svg className="w-4 h-4 text-white/60 group-hover:text-white/80 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                                        </svg>
+                                                    </div>
+
+                                                    {/* Content */}
+                                                    <div className="flex-1 min-w-0">
+                                                        {/* Title */}
+                                                        <div className={`font-medium text-sm leading-5 transition-all duration-200 group-hover:translate-x-1 ${currentSessionId === session._id
+                                                                ? 'text-white'
+                                                                : 'text-white/80 group-hover:text-white'
+                                                            }`}>
+                                                            {truncateTitle(session.title)}
+                                                        </div>
+
+                                                        {/* Last message preview */}
+                                                        {session.lastMessage && (
+                                                            <div className="text-xs text-white/50 mt-1 leading-4">
+                                                                {truncateTitle(session.lastMessage, 50)}
+                                                            </div>
+                                                        )}
+
+                                                        {/* Date */}
+                                                        <div className="text-xs text-white/40 mt-1">
+                                                            {formatDate(session.createdAt)}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Active indicator */}
+                                                    {currentSessionId === session._id && (
+                                                        <div className="flex-shrink-0 w-2 h-2 bg-amber-400 rounded-full mt-2"></div>
+                                                    )}
+                                                </div>
+                                            </button>
+                                        </div>
                                     ))}
                                 </div>
                             )}
@@ -174,6 +245,35 @@ export default function ChatSidebar({
                     }}
                 />
             )}
+
+            {/* Custom scrollbar styles */}
+            <style jsx>{`
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 4px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: rgba(255, 255, 255, 0.05);
+                    border-radius: 2px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: rgba(255, 255, 255, 0.2);
+                    border-radius: 2px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: rgba(255, 255, 255, 0.3);
+                }
+                
+                @keyframes fadeIn {
+                    from {
+                        opacity: 0;
+                        transform: translateY(10px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+            `}</style>
         </>
     );
 }
