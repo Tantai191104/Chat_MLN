@@ -19,7 +19,7 @@ export async function login(email: string, password: string) {
         _id: userData._id,
         email: userData.email,
         name: userData.name,
-
+        avatar: userData.avatar || "",
       });
       store.setAccessToken(userData.token);
     }
@@ -53,6 +53,54 @@ export const resendOTP = async (email: string) => {
   const res = await axiosClient.post("/account/resendOTPtoEmail", {
     email,
     type: "verify_email",
+  });
+  return res;
+};
+export const sendOTPForgotPassword = async (email: string) => {
+  const res = await axiosClient.post("/account/otp-reset-pass", { email });
+  return res;
+};
+export const resetPassword = async (
+  email: string,
+  otp: string,
+  newPassword: string
+) => {
+  const res = await axiosClient.post("/account/resetPassword", {
+    email,
+    otp,
+    newPassword,
+  });
+  return res;
+};
+export const logout = async () => {
+  const store = useAuthStore.getState();
+  store.setUser(null);
+  store.setAccessToken(null);
+};
+export const uploadAvatar = async (avatarUrl: File) => {
+  const formData = new FormData();
+  formData.append("avatar", avatarUrl);
+  const res = await axiosClient.post(`/account/avatar`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return res;
+};
+export const changePassword = async (
+  accountId: string,
+  currentPass: string,
+  newPass: string
+) => {
+  const res = await axiosClient.put(`/account/change-password/${accountId}`, {
+    currentPass,
+    newPass,
+  });
+  return res;
+};
+export const updateName = async (accountId: string, name: string) => {
+  const res = await axiosClient.put(`/account/update/${accountId}`, {
+    name,
   });
   return res;
 };

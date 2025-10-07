@@ -2,6 +2,10 @@
 
 import { ChatSession } from '@/app/chat/page';
 
+import { useState } from 'react';
+import AvatarPasswordPopup from './AvatarPasswordPopup';
+import { useAuthStore } from '@/store/useAuthStore';
+
 interface Props {
     chatSessions: ChatSession[];
     currentSessionId: string | null;
@@ -42,6 +46,9 @@ export default function ChatSidebar({
         return title.substring(0, maxLength) + '...';
     };
 
+    // State quản lý popup avatar
+    const [isAvatarPopupOpen, setIsAvatarPopupOpen] = useState(false);
+    const user = useAuthStore((state) => state.user);
     return (
         <>
             {/* Sidebar */}
@@ -159,8 +166,8 @@ export default function ChatSidebar({
                                         <div
                                             key={session._id}
                                             className={`group transition-all duration-200 hover:scale-[1.02] ${currentSessionId === session._id
-                                                    ? 'bg-white/15 scale-[1.02] shadow-lg shadow-white/10'
-                                                    : 'hover:bg-white/5'
+                                                ? 'bg-white/15 scale-[1.02] shadow-lg shadow-white/10'
+                                                : 'hover:bg-white/5'
                                                 }`}
                                             style={{
                                                 animationDelay: `${index * 50}ms`,
@@ -184,8 +191,8 @@ export default function ChatSidebar({
                                                     <div className="flex-1 min-w-0">
                                                         {/* Title */}
                                                         <div className={`font-medium text-sm leading-5 transition-all duration-200 group-hover:translate-x-1 ${currentSessionId === session._id
-                                                                ? 'text-white'
-                                                                : 'text-white/80 group-hover:text-white'
+                                                            ? 'text-white'
+                                                            : 'text-white/80 group-hover:text-white'
                                                             }`}>
                                                             {truncateTitle(session.title)}
                                                         </div>
@@ -218,11 +225,26 @@ export default function ChatSidebar({
                         {/* Footer user info */}
                         <div className="p-4 border-t border-white/10 mt-auto">
                             <div className="flex items-center gap-3 group">
-                                <div className="w-8 h-8 rounded-full bg-[#e8dcc3] flex items-center justify-center font-bold text-[#3a2c1a] text-sm transition-transform duration-200 group-hover:scale-110">
-                                    T
+                                <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center bg-[#e8dcc3] text-[#3a2c1a] font-bold text-sm transition-transform duration-200 group-hover:scale-110">
+                                    <button
+                                        onClick={() => setIsAvatarPopupOpen(true)}
+                                        className="w-full h-full flex items-center justify-center focus:outline-none"
+                                        title="Chỉnh sửa thông tin cá nhân"
+                                    >
+                                        {user?.avatar ? (
+                                            <img
+                                                src={user.avatar}
+                                                alt={user.name || 'User Avatar'}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <span>{user?.name ? user.name.charAt(0).toUpperCase() : '?'}</span>
+                                        )}
+                                    </button>
                                 </div>
+
                                 <div className="flex-1">
-                                    <div className="text-sm font-semibold">Tai Tan</div>
+                                    <div className="text-sm font-semibold">{user?.name}</div>
                                     <div className="text-xs text-white/60">Free</div>
                                 </div>
                                 <button className="bg-white/10 text-xs px-3 py-1 rounded-lg font-medium hover:bg-white/20 transition-all duration-200 hover:scale-105 hover:shadow-lg">
@@ -274,6 +296,11 @@ export default function ChatSidebar({
                     }
                 }
             `}</style>
+
+            {/* Popup avatar edit */}
+            {isAvatarPopupOpen && (
+                <AvatarPasswordPopup onClose={() => setIsAvatarPopupOpen(false)} />
+            )}
         </>
     );
 }

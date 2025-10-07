@@ -27,135 +27,61 @@ export default function ChatMessages({ currentMessages, setMessage, loading }: P
         setMessage(suggestion);
     };
 
-    // FIXED: Hàm để parse text và highlight links
-    const parseTextWithLinks = (text: string) => {
-        // Tìm tất cả các patterns link
-        type LinkPattern =
-            | {
-                regex: RegExp;
-                replacer: (match: string, linkText: string, url: string, index: string) => JSX.Element;
-            }
-            | {
-                regex: RegExp;
-                replacer: (match: string, url: string, index: string) => JSX.Element;
-            };
+    const parseTextWithLinks = (text: string): React.ReactNode[] => {
+        if (!text) return [];
 
-        const linkPatterns: LinkPattern[] = [
-            // Pattern 1: [text](url)
-            {
-                regex: /\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g,
-                replacer: (match: string, linkText: string, url: string, index: string) => (
-                    <a
-                        key={`markdown-${index}`}
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center px-2 py-1 mx-1 text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 hover:text-blue-800 transition-all duration-200 font-medium text-sm"
-                        style={{
-                            textDecoration: 'none',
-                            boxShadow: '0 1px 3px rgba(59, 130, 246, 0.1)'
-                        }}
-                    >
-                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                        {linkText}
-                    </a>
-                )
-            },
-            // Pattern 2: Plain URLs - Cải thiện regex để xử lý tốt hơn
-            {
-                regex: /(https?:\/\/(?:[-\w.])+(?:[:\d]+)?(?:\/(?:[\w._~!$&'()*+,;=:@-]|%[0-9A-Fa-f]{2})*)*(?:\?(?:[\w._~!$&'()*+,;=:@/?-]|%[0-9A-Fa-f]{2})*)?(?:#(?:[\w._~!$&'()*+,;=:@/?-]|%[0-9A-Fa-f]{2})*)?)/g,
-                replacer: (match: string, url: string, index: string) => (
-                    <a
-                        key={`url-${index}`}
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center px-2 py-1 mx-1 text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 hover:text-blue-800 transition-all duration-200 font-medium text-sm"
-                        style={{
-                            textDecoration: 'none',
-                            boxShadow: '0 1px 3px rgba(59, 130, 246, 0.1)'
-                        }}
-                    >
-                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                        </svg>
-                        {url.length > 40 ? url.substring(0, 40) + '...' : url}
-                    </a>
-                )
-            }
-        ];
-
-        let result = text;
-        let components: Array<{ start: number; end: number; component: JSX.Element }> = [];
-
-        // Xử lý từng pattern
-        linkPatterns.forEach((pattern, patternIndex) => {
-            const matches = Array.from(text.matchAll(pattern.regex));
-
-            matches.forEach((match, matchIndex) => {
-                if (match.index !== undefined) {
-                    const start = match.index;
-                    const end = match.index + match[0].length;
-
-                    // Kiểm tra không bị overlap với components khác
-                    const hasOverlap = components.some(comp =>
-                        (start >= comp.start && start < comp.end) ||
-                        (end > comp.start && end <= comp.end) ||
-                        (start <= comp.start && end >= comp.end)
-                    );
-
-                    if (!hasOverlap) {
-                        let component;
-                        if (pattern.regex.source.includes('\\[')) {
-                            // Markdown link
-                            component = pattern.replacer(match[0], match[1], match[2], `${patternIndex}-${matchIndex}`);
-                        } else {
-                            // Plain URL
-                            component = pattern.replacer(match[0], match[1], '', `${patternIndex}-${matchIndex}`);
-                        }
-
-                        components.push({
-                            start,
-                            end,
-                            component
-                        });
-                    }
-                }
-            });
-        });
-
-        // Sắp xếp components theo vị trí
-        components.sort((a, b) => a.start - b.start);
-
-        // Tạo final result với components
-        if (components.length === 0) {
-            return text;
-        }
-
-        const finalResult: React.ReactNode[] = [];
+        const elements: React.ReactNode[] = [];
         let lastIndex = 0;
 
-        components.forEach((comp) => {
-            // Thêm text trước component
-            if (comp.start > lastIndex) {
-                finalResult.push(text.substring(lastIndex, comp.start));
+        // Regex tổng hợp: markdown link + plain URL
+        const regex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s]+)/g;
+        let match;
+
+        while ((match = regex.exec(text)) !== null) {
+            // Text trước link
+            if (match.index > lastIndex) {
+                elements.push(text.substring(lastIndex, match.index));
             }
 
-            // Thêm component
-            finalResult.push(comp.component);
+            if (match[1] && match[2]) {
+                // Markdown link [text](url)
+                elements.push(
+                    <a
+                        key={match.index}
+                        href={match[2]}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 underline font-medium"
+                    >
+                        {match[1]}
+                    </a>
+                );
+            } else if (match[3]) {
+                // Plain URL
+                elements.push(
+                    <a
+                        key={match.index}
+                        href={match[3]}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 underline font-medium"
+                    >
+                        {match[3].length > 40 ? match[3].slice(0, 40) + '...' : match[3]}
+                    </a>
+                );
+            }
 
-            lastIndex = comp.end;
-        });
-
-        // Thêm text cuối
-        if (lastIndex < text.length) {
-            finalResult.push(text.substring(lastIndex));
+            lastIndex = regex.lastIndex;
         }
 
-        return finalResult;
+        // Text còn lại
+        if (lastIndex < text.length) {
+            elements.push(text.substring(lastIndex));
+        }
+
+        return elements;
     };
+
 
     const FormattedContent = ({ content, type, mediaUrl }: { content: string; type: 'user' | 'ai'; mediaUrl?: string }) => {
         console.log('FormattedContent props:', { content, mediaUrl });
