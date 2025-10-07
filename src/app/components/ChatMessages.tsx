@@ -33,8 +33,8 @@ export default function ChatMessages({ currentMessages, setMessage, loading }: P
         const elements: React.ReactNode[] = [];
         let lastIndex = 0;
 
-        // Regex tổng hợp: markdown link + plain URL
-        const regex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s]+)/g;
+        // Regex tổng hợp: markdown link + plain URL (cải thiện)
+        const regex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<>\[\]()]+)/g;
         let match;
 
         while ((match = regex.exec(text)) !== null) {
@@ -51,22 +51,23 @@ export default function ChatMessages({ currentMessages, setMessage, loading }: P
                         href={match[2]}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 underline font-medium"
+                        className="text-blue-600 hover:text-blue-800 underline font-medium break-words"
                     >
                         {match[1]}
                     </a>
                 );
             } else if (match[3]) {
                 // Plain URL
+                const url = match[3];
                 elements.push(
                     <a
                         key={match.index}
-                        href={match[3]}
+                        href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 underline font-medium"
+                        className="text-blue-600 hover:text-blue-800 underline font-medium break-words"
                     >
-                        {match[3].length > 40 ? match[3].slice(0, 40) + '...' : match[3]}
+                        {url.length > 50 ? url.slice(0, 50) + '...' : url}
                     </a>
                 );
             }
@@ -82,29 +83,147 @@ export default function ChatMessages({ currentMessages, setMessage, loading }: P
         return elements;
     };
 
-
     const FormattedContent = ({ content, type, mediaUrl }: { content: string; type: 'user' | 'ai'; mediaUrl?: string }) => {
-        console.log('FormattedContent props:', { content, mediaUrl });
-
-        let processedContent = '';
-        let paragraphs: string[] = [];
-
         const isImagePlaceholder = content === "[Hình ảnh gửi lên]" || content === "Hình ảnh gửi lên";
 
-        if (content && !isImagePlaceholder) {
-            processedContent = content
-                .replace(/(\d+\.\s)/g, '\n\n$1')
-                .replace(/(Đại diện tiêu biểu:|Nội dung:|Quan điểm chính:|Kết luận:|Ví dụ:)/g, '\n$1')
-                .replace(/([a-zàáảãạăắằẳẵặâấầ̉ẫậêếềểễệèéẻẽẹìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵ])\.\s+([A-ZÀÁẢÃẠĂẮẰẲẴẶÂẤẦẨẪẬĐÈÉẺẼẸÊẾỀỂỄỆÌÍỈĨỊÒÓỎÕỌÔỐỒỔỖỘƠỚỜỞỠỢÙÚỦŨỤƯỨỪỬỮỰỲÝỶỸỴ])/g, '$1.\n\n$2')
-                .replace(/\n{3,}/g, '\n\n')
-                .trim();
+        if (!content && !mediaUrl) return null;
 
-            paragraphs = processedContent.split('\n\n').filter(p => p.trim());
-        }
+        // Xử lý nội dung text
+        const processContent = (text: string) => {
+            if (!text || isImagePlaceholder) return [];
+
+            // Tách các dòng và xử lý
+            const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+            const elements: React.ReactNode[] = [];
+            let currentIndex = 0;
+
+            while (currentIndex < lines.length) {
+                const line = lines[currentIndex];
+
+                // 1. Tiêu đề chính có số thứ tự (1., 2., 3.)
+                const mainTitleMatch = line.match(/^(\d+)\.\s*(.+)$/);
+                if (mainTitleMatch) {
+                    const [, number, title] = mainTitleMatch;
+                    elements.push(
+                        <div key={currentIndex} className="mb-6">
+                            <h2 className="text-xl font-bold text-gray-900 mb-4 leading-tight">
+                                <span className="text-blue-600">{number}.</span> {parseTextWithLinks(title)}
+                            </h2>
+                        </div>
+                    );
+                    currentIndex++;
+                    continue;
+                }
+
+                // 2. Kiểm tra dòng chỉ chứa link (có hoặc không có markdown)
+                const linkOnlyMatch = line.match(/^(.*?)(\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<>\[\]()]+))(.*)$/);
+                if (linkOnlyMatch) {
+                    const beforeLink = linkOnlyMatch[1]?.trim();
+                    const linkText = linkOnlyMatch[3];
+                    const linkUrl = linkOnlyMatch[4] || linkOnlyMatch[5];
+                    const afterLink = linkOnlyMatch[6]?.trim();
+
+                    // Nếu dòng chỉ chứa link (có thể có text ít ở đầu hoặc cuối)
+                    if ((!beforeLink || beforeLink.length < 10) && (!afterLink || afterLink.length < 10)) {
+                        elements.push(
+                            <div key={currentIndex} className="mb-3">
+                                <div className="flex items-center space-x-2">
+                                    <span className="text-blue-600 text-sm">🔗</span>
+                                    <a
+                                        href={linkUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-600 hover:text-blue-800 underline font-medium break-words text-sm"
+                                    >
+                                        {linkText || (linkUrl.length > 60 ? linkUrl.slice(0, 60) + '...' : linkUrl)}
+                                    </a>
+                                </div>
+                            </div>
+                        );
+                        currentIndex++;
+                        continue;
+                    }
+                }
+
+                // 3. Mô tả/nội dung chính (không bắt đầu bằng bullet hoặc số)
+                if (!line.match(/^[•◦○-]\s+/) && !line.match(/^\d+\.\s/) && line.includes(':')) {
+                    const colonIndex = line.indexOf(':');
+                    const beforeColon = line.substring(0, colonIndex);
+                    const afterColon = line.substring(colonIndex + 1).trim();
+
+                    elements.push(
+                        <div key={currentIndex} className="mb-4">
+                            <div className="font-semibold text-gray-800 mb-2">
+                                {parseTextWithLinks(beforeColon)}:
+                            </div>
+                            {afterColon && (
+                                <div className="pl-4 text-gray-700 leading-relaxed">
+                                    {parseTextWithLinks(afterColon)}
+                                </div>
+                            )}
+                        </div>
+                    );
+                    currentIndex++;
+                    continue;
+                }
+
+                // 4. Bullet points
+                if (line.match(/^[•◦○-]\s+/)) {
+                    const cleanText = line.replace(/^[•◦○-]\s+/, '');
+
+                    // Kiểm tra nếu bullet point chứa link
+                    const bulletLinkMatch = cleanText.match(/^(.*?)(\[([^\]]+)\]\((https?:\/\/[^\s)]+)\|(https?:\/\/[^\s<>\[\]()]+))(.*)$/);
+                    if (bulletLinkMatch && (!bulletLinkMatch[1]?.trim() || bulletLinkMatch[1].trim().length < 15)) {
+                        const linkText = bulletLinkMatch[3];
+                        const linkUrl = bulletLinkMatch[4] || bulletLinkMatch[5];
+
+                        elements.push(
+                            <div key={currentIndex} className="mb-2 flex items-start">
+                                <span className="text-blue-600 mr-3 mt-1 text-sm">•</span>
+                                <div className="flex items-center space-x-2 flex-1">
+                                    <span className="text-blue-600 text-sm">🔗</span>
+                                    <a
+                                        href={linkUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-600 hover:text-blue-800 underline font-medium break-words text-sm"
+                                    >
+                                        {linkText || (linkUrl.length > 60 ? linkUrl.slice(0, 60) + '...' : linkUrl)}
+                                    </a>
+                                </div>
+                            </div>
+                        );
+                    } else {
+                        elements.push(
+                            <div key={currentIndex} className="mb-2 flex items-start">
+                                <span className="text-blue-600 mr-3 mt-1 text-sm">•</span>
+                                <div className="text-gray-800 leading-relaxed flex-1">
+                                    {parseTextWithLinks(cleanText)}
+                                </div>
+                            </div>
+                        );
+                    }
+                    currentIndex++;
+                    continue;
+                }
+
+                // 5. Đoạn văn thông thường
+                elements.push(
+                    <p key={currentIndex} className="mb-4 text-gray-800 leading-relaxed">
+                        {parseTextWithLinks(line)}
+                    </p>
+                );
+                currentIndex++;
+            }
+
+            return elements;
+        };
+
+        const contentElements = processContent(content);
 
         return (
-            <div className="space-y-4">
-                {/* Hiển thị ảnh nếu có mediaUrl */}
+            <div className="space-y-1">
+                {/* Hiển thị ảnh */}
                 {mediaUrl && (
                     <div className="mb-4">
                         <img
@@ -117,110 +236,27 @@ export default function ChatMessages({ currentMessages, setMessage, loading }: P
                                 console.error('Image load error:', e);
                                 e.currentTarget.style.display = 'none';
                             }}
-                            onLoad={() => {
-                                console.log('Image loaded successfully:', mediaUrl);
-                            }}
                         />
                     </div>
                 )}
 
-                {/* Hiển thị content text nếu có và không phải placeholder */}
-                {content && !isImagePlaceholder && paragraphs.length > 0 && (
-                    <div>
-                        {paragraphs.map((paragraph, paragraphIndex) => {
-                            const lines = paragraph.split('\n').filter(line => line.trim());
-
-                            return (
-                                <div key={paragraphIndex}>
-                                    {lines.map((line, lineIndex) => {
-                                        const trimmed = line.trim();
-                                        if (!trimmed) return null;
-
-                                        // Loại bỏ bullet points và dashes khỏi text
-                                        const cleanedText = trimmed.replace(/^[◦•○-]\s+/, '');
-
-                                        // Kiểm tra các pattern
-                                        const isNumberedTitle = /^\d+\.\s+.*:/.test(cleanedText);
-                                        const isNumberedItem = /^\d+\.\s+/.test(cleanedText) && !isNumberedTitle;
-                                        const isKeyword = /^(Đại diện tiêu biểu|Nội dung|Quan điểm chính|Kết luận|Ví dụ):/.test(cleanedText);
-
-                                        // Numbered title với dấu hai chấm
-                                        if (isNumberedTitle) {
-                                            return (
-                                                <div key={lineIndex} className="mt-6 mb-3">
-                                                    <h3 className="text-lg font-bold text-gray-800 leading-snug">
-                                                        {parseTextWithLinks(cleanedText)}
-                                                    </h3>
-                                                </div>
-                                            );
-                                        }
-
-                                        // Numbered item
-                                        if (isNumberedItem) {
-                                            return (
-                                                <div key={lineIndex} className="mt-4 mb-2">
-                                                    <h4 className="text-base font-semibold text-gray-800 leading-snug">
-                                                        {parseTextWithLinks(cleanedText)}
-                                                    </h4>
-                                                </div>
-                                            );
-                                        }
-
-                                        // Keywords
-                                        if (isKeyword) {
-                                            const parts = cleanedText.split(':');
-                                            const keyword = parts[0];
-                                            const content = parts.slice(1).join(':').trim();
-
-                                            return (
-                                                <div key={lineIndex} className="mt-3 mb-2">
-                                                    <div className="font-semibold text-gray-700 mb-1">
-                                                        {keyword}:
-                                                    </div>
-                                                    {content && (
-                                                        <div className={`pl-4 leading-relaxed ${type === 'user' ? 'font-medium text-gray-900' : 'text-gray-800'}`}>
-                                                            {parseTextWithLinks(content)}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        }
-
-                                        // Regular paragraph
-                                        return (
-                                            <p
-                                                key={lineIndex}
-                                                className={`leading-relaxed my-2 ${type === 'user' ? 'font-medium text-gray-900' : 'text-gray-800'
-                                                    }`}
-                                            >
-                                                {parseTextWithLinks(cleanedText)}
-                                            </p>
-                                        );
-                                    })}
-                                </div>
-                            );
-                        })}
+                {/* Hiển thị nội dung text */}
+                {contentElements.length > 0 && (
+                    <div className="space-y-1">
+                        {contentElements}
                     </div>
                 )}
 
-                {/* Trường hợp chỉ có ảnh hoặc có ảnh với placeholder text */}
+                {/* Trường hợp đặc biệt */}
                 {mediaUrl && (isImagePlaceholder || !content) && (
-                    <p className="text-gray-500 italic text-sm mt-2">
+                    <p className="text-gray-500 italic text-sm">
                         📸 Hình ảnh
                     </p>
                 )}
 
-                {/* Trường hợp có placeholder text nhưng không có ảnh */}
                 {isImagePlaceholder && !mediaUrl && (
                     <p className="text-gray-500 italic">
                         {content}
-                    </p>
-                )}
-
-                {/* Trường hợp chỉ có text đơn giản với links */}
-                {content && !isImagePlaceholder && paragraphs.length === 0 && (
-                    <p className={`leading-relaxed ${type === 'user' ? 'font-medium text-gray-900' : 'text-gray-800'}`}>
-                        {parseTextWithLinks(content)}
                     </p>
                 )}
             </div>
@@ -257,59 +293,55 @@ export default function ChatMessages({ currentMessages, setMessage, loading }: P
     return (
         <div className="h-full overflow-y-auto">
             <div className="p-4">
-                <div className="max-w-4xl mx-auto space-y-8">
-                    {currentMessages.map((msg, i) => {
-                        console.log('Message:', msg);
+                <div className="max-w-4xl mx-auto space-y-6">
+                    {currentMessages.map((msg, i) => (
+                        <div key={i} className="flex items-start space-x-4">
+                            {/* Avatar */}
+                            <div
+                                className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg flex-shrink-0 ${msg.type === 'user'
+                                    ? 'bg-gradient-to-br from-amber-500 to-orange-600 text-white ring-2 ring-amber-300'
+                                    : 'bg-gradient-to-br from-blue-600 to-indigo-700 text-white ring-2 ring-blue-300'
+                                    }`}
+                            >
+                                {msg.type === 'user' ? (
+                                    <span className="text-lg font-bold">T</span>
+                                ) : (
+                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path
+                                            fillRule="evenodd"
+                                            d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
+                                            clipRule="evenodd"
+                                        />
+                                    </svg>
+                                )}
+                            </div>
 
-                        return (
-                            <div key={i} className="flex items-start space-x-4">
-                                {/* Avatar */}
+                            {/* Nội dung */}
+                            <div className="flex-1 min-w-0">
                                 <div
-                                    className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg flex-shrink-0 ${msg.type === 'user'
-                                        ? 'bg-gradient-to-br from-amber-500 to-orange-600 text-white ring-2 ring-amber-300'
-                                        : 'bg-gradient-to-br from-blue-600 to-indigo-700 text-white ring-2 ring-blue-300'
+                                    className={`inline-block px-3 py-1 rounded-full text-sm font-bold mb-3 shadow-md ${msg.type === 'user'
+                                        ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white'
+                                        : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white'
                                         }`}
                                 >
-                                    {msg.type === 'user' ? (
-                                        <span className="text-lg font-bold">T</span>
-                                    ) : (
-                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                            <path
-                                                fillRule="evenodd"
-                                                d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
-                                                clipRule="evenodd"
-                                            />
-                                        </svg>
-                                    )}
+                                    {msg.type === 'user' ? '🙋‍♂️ Bạn' : '🤖 Lý luận nhận thức'}
                                 </div>
 
-                                {/* Nội dung */}
-                                <div className="flex-1 min-w-0">
-                                    <div
-                                        className={`inline-block px-3 py-1 rounded-full text-sm font-bold mb-4 shadow-md ${msg.type === 'user'
-                                            ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white'
-                                            : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white'
-                                            }`}
-                                    >
-                                        {msg.type === 'user' ? '🙋‍♂️ Bạn' : '🤖 Lý luận nhận thức'}
-                                    </div>
-
-                                    <div
-                                        className={`rounded-xl p-6 shadow-lg border-2 ${msg.type === 'user'
-                                            ? 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-300'
-                                            : 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-300'
-                                            }`}
-                                    >
-                                        <FormattedContent
-                                            content={msg.content}
-                                            type={msg.type}
-                                            mediaUrl={msg.mediaUrl}
-                                        />
-                                    </div>
+                                <div
+                                    className={`rounded-xl p-5 shadow-lg border ${msg.type === 'user'
+                                        ? 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200'
+                                        : 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200'
+                                        }`}
+                                >
+                                    <FormattedContent
+                                        content={msg.content}
+                                        type={msg.type}
+                                        mediaUrl={msg.mediaUrl}
+                                    />
                                 </div>
                             </div>
-                        );
-                    })}
+                        </div>
+                    ))}
 
                     {loading && (
                         <div className="flex items-start space-x-4">
@@ -323,10 +355,10 @@ export default function ChatMessages({ currentMessages, setMessage, loading }: P
                                 </svg>
                             </div>
                             <div className="flex-1 min-w-0">
-                                <div className="inline-block px-3 py-1 rounded-full text-sm font-bold mb-4 shadow-md bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+                                <div className="inline-block px-3 py-1 rounded-full text-sm font-bold mb-3 shadow-md bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
                                     🤖 Lý luận nhận thức
                                 </div>
-                                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 shadow-lg border-2 border-blue-300">
+                                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-5 shadow-lg border border-blue-200">
                                     <div className="flex items-center space-x-3">
                                         <div className="flex space-x-1">
                                             <div className="w-3 h-3 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full animate-bounce shadow-sm"></div>
