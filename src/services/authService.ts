@@ -3,7 +3,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 
 export async function login(email: string, password: string) {
   try {
-    const res = await axiosClient.post("/account/login", { email, password });
+    const res = await axiosClient.post("/api/account/login", { email, password });
     console.log("Login response:", res.data);
 
     // ✅ Ở đây backend trả về { message, data }
@@ -32,7 +32,7 @@ export async function login(email: string, password: string) {
 }
 
 export async function register(name: string, email: string, password: string) {
-  const res = await axiosClient.post("/account/register", {
+  const res = await axiosClient.post("/api/account/register", {
     name,
     email,
     password,
@@ -42,7 +42,7 @@ export async function register(name: string, email: string, password: string) {
 }
 
 export const verifyOTP = async (email: string, otp: string) => {
-  const res = await axiosClient.post("/account/verifyOTP", {
+  const res = await axiosClient.post("/api/account/verifyOTP", {
     email,
     otp,
     type: "verify_email",
@@ -50,14 +50,14 @@ export const verifyOTP = async (email: string, otp: string) => {
   return res;
 };
 export const resendOTP = async (email: string) => {
-  const res = await axiosClient.post("/account/resendOTPtoEmail", {
+  const res = await axiosClient.post("/api/account/resendOTPtoEmail", {
     email,
     type: "verify_email",
   });
   return res;
 };
 export const sendOTPForgotPassword = async (email: string) => {
-  const res = await axiosClient.post("/account/otp-reset-pass", { email });
+  const res = await axiosClient.post("/api/account/otp-reset-pass", { email });
   return res;
 };
 export const resetPassword = async (
@@ -65,7 +65,7 @@ export const resetPassword = async (
   otp: string,
   newPassword: string
 ) => {
-  const res = await axiosClient.post("/account/resetPassword", {
+  const res = await axiosClient.post("/api/account/resetPassword", {
     email,
     otp,
     newPassword,
@@ -80,7 +80,7 @@ export const logout = async () => {
 export const uploadAvatar = async (avatarUrl: File) => {
   const formData = new FormData();
   formData.append("avatar", avatarUrl);
-  const res = await axiosClient.post(`/account/avatar`, formData, {
+  const res = await axiosClient.post(`/api/account/avatar`, formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },
@@ -92,14 +92,14 @@ export const changePassword = async (
   currentPass: string,
   newPass: string
 ) => {
-  const res = await axiosClient.put(`/account/change-password/${accountId}`, {
+  const res = await axiosClient.put(`/api/account/change-password/${accountId}`, {
     currentPass,
     newPass,
   });
   return res;
 };
 export const updateName = async (accountId: string, name: string) => {
-  const res = await axiosClient.put(`/account/update/${accountId}`, {
+  const res = await axiosClient.put(`/api/account/update/${accountId}`, {
     name,
   });
   return res;

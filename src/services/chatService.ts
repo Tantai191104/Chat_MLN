@@ -1,23 +1,23 @@
 import axiosClient from "@/app/lib/axios";
 
 export const createChat = async (content: string) => {
-  const res = await axiosClient.post("/chats/new/messages", { content });
+  const res = await axiosClient.post("/api/chats/new/messages", { content });
   return res;
 };
 
 export const getChats = async () => {
-  const res = await axiosClient.get("/chats");
+  const res = await axiosClient.get("/api/chats");
   return res;
 };
 
 export const getChatById = async (chatId: string) => {
-  const res = await axiosClient.get(`/chats/${chatId}/messages`);
+  const res = await axiosClient.get(`/api/chats/${chatId}/messages`);
   console.log(res);
   return res;
 };
 
 export const sendMessage = async (chatId: string, content: string) => {
-  const res = await axiosClient.post(`/chats/${chatId}/messages`, { content });
+  const res = await axiosClient.post(`/api/chats/${chatId}/messages`, { content });
   return res;
 };
 export const sendImgMessage = async (
@@ -28,7 +28,7 @@ export const sendImgMessage = async (
   const formData = new FormData();
   formData.append("image", image);
   formData.append("content", content);
-  const res = await axiosClient.post(`/chats/${chatId}/images`, formData, {
+  const res = await axiosClient.post(`/api/chats/${chatId}/images`, formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },
