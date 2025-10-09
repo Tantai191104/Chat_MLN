@@ -131,14 +131,6 @@ export default function ChatSidebar({
                                 </svg>
                                 <span className="font-medium text-sm">Đoạn chat mới</span>
                             </button>
-
-                            <button className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-white/10 transition-all duration-200 text-left group hover:scale-[1.02] hover:shadow-lg hover:shadow-white/5">
-                                <svg className="w-5 h-5 transition-transform duration-200 group-hover:scale-110" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                    <circle cx="11" cy="11" r="8" />
-                                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                                </svg>
-                                <span className="font-medium text-sm">Tìm kiếm đoạn chat</span>
-                            </button>
                         </div>
 
                         {/* Label nhóm */}
@@ -224,7 +216,7 @@ export default function ChatSidebar({
 
                         {/* Footer user info */}
                         <div className="p-4 border-t border-white/10 mt-auto">
-                            <div className="flex items-center gap-3 group">
+                            <div className="flex items-center gap-3 group mb-3">
                                 <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center bg-[#e8dcc3] text-[#3a2c1a] font-bold text-sm transition-transform duration-200 group-hover:scale-110">
                                     <button
                                         onClick={() => setIsAvatarPopupOpen(true)}
@@ -251,6 +243,21 @@ export default function ChatSidebar({
                                     Nâng cấp
                                 </button>
                             </div>
+                            
+                            {/* Logout button */}
+                            <button
+                                onClick={() => {
+                                    useAuthStore.getState().logout();
+                                    window.location.href = '/login';
+                                }}
+                                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg hover:bg-red-500/20 text-red-300 hover:text-red-200 transition-all duration-200 text-left group hover:scale-[1.02] border border-red-500/20 hover:border-red-500/40"
+                                title="Đăng xuất"
+                            >
+                                <svg className="w-4 h-4 transition-transform duration-200 group-hover:scale-110" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
+                                <span className="font-medium text-sm">Đăng xuất</span>
+                            </button>
                         </div>
                     </>
                 )}

@@ -23,7 +23,7 @@ export default function RegisterPage() {
             ...prev,
             [name]: value
         }));
-        
+
         // Clear error when user starts typing
         if (errors[name]) {
             setErrors(prev => ({
@@ -66,30 +66,30 @@ export default function RegisterPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!validateForm()) {
             messageApi.warning('Vui lòng kiểm tra lại thông tin');
             return;
         }
 
         setLoading(true);
-        
+
         try {
             const response = await register(
-                formData.username, 
-                formData.email, 
+                formData.username,
+                formData.email,
                 formData.password
             );
-            
+
             if (response.data.success) {
                 messageApi.success({
-                    content: response.data.message,
+                    content: response.data.message || 'Đăng ký thành công! Hãy đăng nhập để tiếp tục.',
                     duration: 3,
                 });
-                
-                // Redirect to OTP verification page
+
+                // 👉 Chuyển hướng thẳng sang trang login sau khi đăng ký thành công
                 setTimeout(() => {
-                    router.push(`/verify?email=${encodeURIComponent(formData.email)}`);
+                    router.push('/login');
                 }, 1500);
             } else {
                 messageApi.error({
@@ -99,7 +99,7 @@ export default function RegisterPage() {
             }
         } catch (error: any) {
             console.error('Registration error:', error);
-            
+
             if (error.response?.data?.message) {
                 messageApi.error({
                     content: error.response.data.message,
@@ -116,21 +116,22 @@ export default function RegisterPage() {
         }
     };
 
+
     return (
         <div className="min-h-screen flex items-center justify-center relative bg-philo-bg">
             {contextHolder}
-            
+
             {/* Background Image */}
-            <div 
+            <div
                 className="absolute inset-0 bg-cover bg-center bg-no-repeat"
                 style={{
                     backgroundImage: "url('https://cdn.vietnambiz.vn/2019/9/23/mind-1-e1566168915788-1569231581988672857339.jpg')"
                 }}
             ></div>
-            
+
             {/* Dark Overlay */}
             <div className="absolute inset-0 bg-black/40"></div>
-            
+
             {/* Registration Form */}
             <div className="relative z-10 w-full max-w-md mx-4">
                 <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-amber-200">
@@ -157,9 +158,8 @@ export default function RegisterPage() {
                                 name="username"
                                 value={formData.username}
                                 onChange={handleChange}
-                                className={`w-full px-4 py-3 bg-amber-50 border rounded-xl text-gray-900 font-semibold placeholder-gray-400 shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-600 ${
-                                    errors.username ? 'border-red-500' : 'border-amber-500'
-                                }`}
+                                className={`w-full px-4 py-3 bg-amber-50 border rounded-xl text-gray-900 font-semibold placeholder-gray-400 shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-600 ${errors.username ? 'border-red-500' : 'border-amber-500'
+                                    }`}
                                 placeholder="Nhập tên người dùng"
                                 disabled={loading}
                             />
@@ -179,9 +179,8 @@ export default function RegisterPage() {
                                 name="email"
                                 value={formData.email}
                                 onChange={handleChange}
-                                className={`w-full px-4 py-3 bg-amber-50 border rounded-xl text-gray-900 font-semibold placeholder-gray-400 shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-600 ${
-                                    errors.email ? 'border-red-500' : 'border-amber-500'
-                                }`}
+                                className={`w-full px-4 py-3 bg-amber-50 border rounded-xl text-gray-900 font-semibold placeholder-gray-400 shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-600 ${errors.email ? 'border-red-500' : 'border-amber-500'
+                                    }`}
                                 placeholder="Nhập địa chỉ email"
                                 disabled={loading}
                             />
@@ -201,9 +200,8 @@ export default function RegisterPage() {
                                 name="password"
                                 value={formData.password}
                                 onChange={handleChange}
-                                className={`w-full px-4 py-3 bg-amber-50 border rounded-xl text-gray-900 font-semibold placeholder-gray-400 shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-600 ${
-                                    errors.password ? 'border-red-500' : 'border-amber-500'
-                                }`}
+                                className={`w-full px-4 py-3 bg-amber-50 border rounded-xl text-gray-900 font-semibold placeholder-gray-400 shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-600 ${errors.password ? 'border-red-500' : 'border-amber-500'
+                                    }`}
                                 placeholder="Nhập mật khẩu"
                                 disabled={loading}
                             />
@@ -223,9 +221,8 @@ export default function RegisterPage() {
                                 name="confirmPassword"
                                 value={formData.confirmPassword}
                                 onChange={handleChange}
-                                className={`w-full px-4 py-3 bg-amber-50 border rounded-xl text-gray-900 font-semibold placeholder-gray-400 shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-600 ${
-                                    errors.confirmPassword ? 'border-red-500' : 'border-amber-500'
-                                }`}
+                                className={`w-full px-4 py-3 bg-amber-50 border rounded-xl text-gray-900 font-semibold placeholder-gray-400 shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-600 ${errors.confirmPassword ? 'border-red-500' : 'border-amber-500'
+                                    }`}
                                 placeholder="Nhập lại mật khẩu"
                                 disabled={loading}
                             />
